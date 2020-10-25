@@ -54,7 +54,7 @@ class Monitor {
     // 30分钟
     this.timeCycle = 1000 * 60 * 30;
 
-    this.debugger = true;
+    this.debugger = false;
 
     this.$ajax = new Api();
 
@@ -428,10 +428,10 @@ class Monitor {
       // 盘口是否可以点击下注
       this.debugger && console.log(
         "盘口是否可以点击:",
-        $node === null || $($node).hasClass(".srb-ParticipantCenteredStackedMarketRow_Suspended"),
+        $node === null || $($node).hasClass("srb-ParticipantCenteredStackedMarketRow_Suspended"),
         $($node).attr("class")
       );
-      if ($node === null || $($node).hasClass(".srb-ParticipantCenteredStackedMarketRow_Suspended")) {
+      if ($node === null || $($node).hasClass("srb-ParticipantCenteredStackedMarketRow_Suspended")) {
         this.debugger && console.log("未查询到下注盘口");
         // 不可以, 继续监控
         this.remonitor()

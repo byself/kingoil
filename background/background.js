@@ -9,7 +9,7 @@ const CommonOps = {
   username: '', // 用户名
   amount: '', // 账户金额
 
-  debugger: true,
+  debugger: false,
 
   //监控状态，true:监控中，false:未监控；在更新投标方式重新监控时使用
   monitorStatus: false,

@@ -3,7 +3,7 @@ const Bet = {
   $monitor: new Monitor(),
   $checkenv: new CheckEnv(),
   $uploadmatchdata: new UploadMatchData(),
-  debugger: true
+  debugger: false
 }
 
 // 注意，必须设置了run_at=document_start 此段代码才会生效
