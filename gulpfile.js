@@ -11,14 +11,14 @@ function background(done){
     .pipe(uglify({
         mangle:true
     }))
-    .pipe(dest("output/background"));
+    .pipe(dest("bet/background"));
 
     src('background/*.html')
     .pipe(htmlmin({
         collapseWhitespace: true,
         removeComments: true
     }))
-    .pipe(dest("output/background"));
+    .pipe(dest("bet/background"));
 
     done()
 }
@@ -29,25 +29,25 @@ function content_script(done){
     .pipe(uglify({
         mangle:true
     }))
-    .pipe(dest("output/content"));
+    .pipe(dest("bet/content"));
     done()
 }
 
 function copy(done){
     src(['images/*'])
-    .pipe(dest("output/images"));
+    .pipe(dest("bet/images"));
 
     src(['popup/*', 'popup/*/**'])
-    .pipe(dest("output/popup"));
+    .pipe(dest("bet/popup"));
 
     src('manifest.json')
-    .pipe(dest("output/"));
+    .pipe(dest("bet/"));
 
     done()
 }
 
 function compress(done){
-    src(['output/*', 'output/*/**'])
+    src(['bet/*', 'bet/*/**'])
     .pipe(zip('bet.zip'))
     .pipe(dest("dist/"));
 

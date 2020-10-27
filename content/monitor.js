@@ -239,7 +239,7 @@ class Monitor {
     // todo: 球队名称获取
     // let $nodeBallGroupName = $(".ipe-EventSwitcherFixture_CurrentFixture").prev()[0];
     // const BallGroupName = $nodeBallGroupName ? $nodeBallGroupName.innerText : "";
-    $(".ipe-MatchButton").click();
+    $(".ipe-EventHeaderBreadcrumb_MatchButton").click();
     
     // const BallGroupName = this.gameInfo.groupName;
     const BallGroupName = $(".ipn-Fixture.ipn-Fixture-selected").parents(".ipn-Competition").find(".ipn-CompetitionButton_Text").text();
