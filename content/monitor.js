@@ -482,7 +482,7 @@ class Monitor {
       let count = 1;
       let timer = setInterval(async () => {
         this.debugger && console.log("count:", count);
-        if (count <= 10) {
+        if (count <= 30) {
           const btnText = $(".qbs-QuickBetHeader_MessageBody").text();
           const btnText2 = $(".qbs-AcceptButton_PlaceBet").text();
           this.debugger && console.log("btnText:", btnText);
@@ -510,7 +510,7 @@ class Monitor {
             }, 1000);
           } else if (btnText === "投注项已无效") {
             // 设置count >= 10, 下次循环走else逻辑
-            count = 10;
+            count = 30;
           } else if (btnText === "您所选投注项的赔率已经产生变化" && btnText2 === "投注") {
             // 继续投注需要检测比赛时间是否满足条件，详情页时间小于60s，返回列表页
             const RemainingTime = $(".ml18-ScoreHeaderBasketball_Clock").text();
@@ -523,7 +523,7 @@ class Monitor {
               // $(".qbs-AcceptButton").click();
               // count = 0;
 
-              count = 10; // 设置count >= 10, 下次循环走else逻辑
+              count = 30; // 设置count >= 30, 下次循环走else逻辑
             }
           }else {
           }
