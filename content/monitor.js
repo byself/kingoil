@@ -242,7 +242,7 @@ class Monitor {
     $(".ipe-EventHeaderBreadcrumb_MatchButton").click();
     
     // const BallGroupName = this.gameInfo.groupName;
-    const BallGroupName = $(".ipn-Fixture.ipn-Fixture-selected").parents(".ipn-Competition").find(".ipn-CompetitionButton_Text").text();
+    const BallGroupName = $(".ies-Fixture.ies-Fixture-selected").parents(".ies-Competition").find(".ies-CompetitionButton_Text").text();
     $(".g5-PopupManager_ClickMask").click();
     const ATeamName = $(".lsb-ScoreBasedScoreboard_Team1Container").text();
     const BTeamName = $(".lsb-ScoreBasedScoreboard_Team2Container").text();
