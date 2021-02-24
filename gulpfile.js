@@ -24,7 +24,7 @@ function background(done){
 }
 
 function content_script(done){
-    src(['js/jquery-3.4.1.min.js', 'js/api.js', 'content/upload-match-data.js', 'content/checkenv.js', 'content/monitor.js', 'content/content-script.js'])
+    src(['js/jquery-3.4.1.min.js', 'js/utils.js', 'js/api.js', 'content/upload-match-data.js', 'content/checkenv.js', 'content/monitor.js', 'content/content-script.js'])
     .pipe(concat('content-script.js'))
     .pipe(uglify({
         mangle:true

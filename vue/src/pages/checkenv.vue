@@ -22,7 +22,7 @@
             :name="item.iconType"
             size="md"
             :color="item.iconType === 'check' ? '#ff5257' : '#5bb69e'"
-          ></md-icon> {{item.text}}
+          ></md-icon> {{item.text}} <template v-if="item.error">({{item.error}})</template>
         </div>
       </template>
     </div>
@@ -54,49 +54,48 @@ export default {
           iconType: "check",
           text: "成功登录Bet365"
         },
-        // {
-        //   iconType: "check",
-        //   text: "网页激活滚球盘->篮球选项位置"
-        // }
+        {
+          iconType: "check",
+          text: "365网站会员在Oil King验证失败",
+          error:""
+        },
       ]
     };
   },
   created() {
     this.check();
-    // this.checkSuccess();
   },
   methods: {
     async check() {
-      this.recheck = true;
-
       const $background = chrome.extension.getBackgroundPage();
 
       const checkResult = await $background.checkEnv();
 
       checkResult.forEach((item, index) => {
-        this.checkItems[index].iconType = item;
+        this.checkItems[index].iconType = item.iconType;
       });
 
-      // console.log("popup checkenv:", checkResult);
+      setTimeout(() => {
+        const {iconType, error} = $background.autoLogin();
+        this.checkItems[2].iconType = iconType
+        this.checkItems[2].error = error
 
-      this.recheck = false;
-
-      this.checkSuccess(checkResult);
+        if(this.checkItems[0].iconType === "success" && this.checkItems[1].iconType === "success" && this.checkItems[2].iconType === "success"){
+          this.checkSuccess();
+        }
+      }, 1000)
     },
 
-    async checkSuccess(result) {
+    async checkSuccess() {
       const $background = chrome.extension.getBackgroundPage();
       const {planId} = await $background.getCommonOps();
       setTimeout(() => {
-        if (result.length === this.checkItems.length) {
-          if(planId){
-            this.$router.push("/bet/result/home");
-          }else{
-            this.$router.push("/bet/plan");
-          }
-          
+        if(planId){
+          this.$router.push("/bet/result/home");
+        }else{
+          this.$router.push("/bet/plan");
         }
-      }, 1000);
+      }, 1000)
     }
   }
 };

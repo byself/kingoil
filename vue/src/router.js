@@ -16,11 +16,11 @@ import Log from './pages/log.vue'
 const route = new Router({
   routes: [
     {
-      path: '/check',
+      path: '/',
       component: Check
     },
     {
-      path: '/',
+      path: '/login',
       component: Login
     },
     {

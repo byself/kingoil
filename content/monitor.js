@@ -19,18 +19,18 @@
 class Monitor {
   constructor() {
     // 场次规则
-    this.gameRules = ["第4节", "下半场", "加时"];
+    // this.gameRules = ["第4节", "下半场", "加时"];
 
-    // 时间规则(秒)：最后2分钟-最后1分钟时间段
-    this.timeRules = [60, 100];
+    // // 时间规则(秒)：最后2分钟-最后1分钟时间段
+    // this.timeRules = [60, 100];
 
-    // 分数规则：比分差不大于8分
-    this.scoreRules = 8;
+    // // 分数规则：比分差不大于8分
+    // this.scoreRules = 8;
 
     // mock
-    // this.gameRules = ["第2节", "第3节", "第4节", "下半场", "加时"];
-    // this.timeRules = [30, 600];
-    // this.scoreRules = 10;
+    this.gameRules = ["第2节", "第3节", "第4节", "下半场", "加时"];
+    this.timeRules = [60, 600];
+    this.scoreRules = 10;
     
     // 满足条件的候选比赛
     this.alternativeGame = [];
@@ -54,13 +54,32 @@ class Monitor {
     // 30分钟
     this.timeCycle = 1000 * 60 * 30;
 
-    this.debugger = false;
+    this.debugger = true;
 
     this.$ajax = new Api();
 
     this.gameInfo = {
       groupName: ""
     };
+
+    this.isMonitorList = true;
+    this.isMonitorDetail = false;
+  }
+
+  startMonitorList(){
+    this.isMonitorList = true
+  }
+
+  stopMonitorList(){
+    this.isMonitorList = false
+  }
+
+  startMonitorDetail(){
+    this.isMonitorDetail = true
+  }
+
+  stopMonitorDetail(){
+    this.isMonitorDetail = false
   }
 
   // 模拟touch事件
@@ -106,6 +125,8 @@ class Monitor {
    * 列表页监控
    */
   list() {
+    if(!this.isMonitorList) return;
+
     this.debugger && console.log("========================list begin========================");
     this.debugger && console.log("list ignoreGame:", this.ignoreGame);
 
@@ -214,18 +235,46 @@ class Monitor {
       this.log(`数据监控，总共${this.alternativeGame.length}只猎物，进入[${selectedTeamAName} vs ${selectedTeamBName}]进行详细监控`)
 
       this.gameInfo.groupName = this.alternativeGame[0].parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text()
+      this.alternativeGame[0].find(".ovm-MediaIconContainer_Buttons").click()
 
-      this.click(this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay")[0])
+      // 获取联赛名称
+      this.BallGroupName = this.alternativeGame[0].parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text()
+      this.ATeamOddsNode = this.alternativeGame[0].find(".ovm-ParticipantOddsOnly_Odds")[0]
+      this.BTeamOddsNode = this.alternativeGame[0].find(".ovm-ParticipantOddsOnly_Odds")[1]
+
+      const ATeamName = this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay_TeamName")[0].innerText;
+      const BTeamName = this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay_TeamName")[1].innerText;
+      this.TeamNameToOddsNode[ATeamName] = this.ATeamOddsNode
+      this.TeamNameToOddsNode[BTeamName] = this.BTeamOddsNode
+
+      this.stopMonitorList()
+      this.startMonitorDetail()
     }else{
       this.log(`数据监控，无猎物`)
       this.reload()
     }
   }
 
+  monitorSwitchGame(){
+    // 监听比赛详情信息变化
+    utils.domReady(".lsb-ScoreBasedScoreboard_Team1Container", (element) => {
+      console.log("domReady:", element)
+      if(!$(".lv-ButtonBar").hasClass("Hidden")){
+        document.querySelector(".lv-ButtonBar_MatchLiveIcon").click()
+      }
+    })
+
+    utils.domReady(".qbs-NormalBetItem_Title", (element) => {
+      this.showKeyBoard()
+    })
+  }
+
   /**
    * 详情页监控
    */
   async detail() {
+    if(!this.isMonitorDetail) return;
+
     this.debugger && console.log("========================detail begin========================");
     const RemainingTime = $(".ml18-BasketballClock_Clock").text();
 
@@ -236,14 +285,7 @@ class Monitor {
       this.betCompelete();
       return;
     }
-    // todo: 球队名称获取
-    // let $nodeBallGroupName = $(".ipe-EventSwitcherFixture_CurrentFixture").prev()[0];
-    // const BallGroupName = $nodeBallGroupName ? $nodeBallGroupName.innerText : "";
-    $(".ipe-EventHeaderBreadcrumb_MatchButton").click();
-    
-    // const BallGroupName = this.gameInfo.groupName;
-    const BallGroupName = $(".ies-Fixture.ies-Fixture-selected").parents(".ies-Competition").find(".ies-CompetitionButton_Text").text();
-    $(".g5-PopupManager_ClickMask").click();
+
     const ATeamName = $(".lsb-ScoreBasedScoreboard_Team1Container").text();
     const BTeamName = $(".lsb-ScoreBasedScoreboard_Team2Container").text();
     const ATeamScore = $(".lsb-ScoreBasedScoreboard_TeamScore")[0] && $(".lsb-ScoreBasedScoreboard_TeamScore")[0].innerText;
@@ -252,27 +294,12 @@ class Monitor {
     const HasVideo = $(".ml18-BasketballCourt_SVG")[0] ? 1 : 0;
 
     // 盘口获取赔率
-    const $ipeMarkets = $(".sip-MarketGroup");
-    let ATeamOdds = 0;
-    let BTeamOdds = 0;
-    for (let i = 0; i < $ipeMarkets.length; i++) {
-      const $market = $($ipeMarkets[i]);
-      const text = $market.find(".sip-MarketGroupButton_Text").text();
-      const type = $market.find(".srb-ParticipantLabel_Name").text();
+    let ATeamOdds = this.ATeamOddsNode.innerText;
+    let BTeamOdds = this.BTeamOddsNode.innerText;
 
-      const $lastCol = $market.find(".gl-Market_General-lastinrow");
-      const $firstCol = $lastCol.prev();
-      
-
-      if (text === "比赛投注" && type.indexOf("强弱盘赔率") >= 0) {
-        ATeamOdds = $firstCol.find(".srb-ParticipantCenteredStackedMarketRow_Odds").last().text();
-        BTeamOdds = $lastCol.find(".srb-ParticipantCenteredStackedMarketRow_Odds").last().text();
-      }
-    }
-
-    // 如果赔率为0，表示没有“比赛获胜”的盘口，结束本次监控
-    if (ATeamOdds === 0 && BTeamOdds === 0) {
-      return;
+    // 如果赔率为空，表示“强弱盘赔率”盘口没有数据，结束本次监控
+    if (ATeamOdds === '' && BTeamOdds === '') {
+      return false;
     }
 
     // 判断球权
@@ -301,7 +328,7 @@ class Monitor {
     const BTeamFt = $(".ml-DualStat_Percentage")[1] ? $(".ml-DualStat_Percentage")[1].innerText : "";
 
     const data = {
-      BallGroupName,
+      BallGroupName: this.BallGroupName,
       ATeamName,
       BTeamName,
       ATeamScore,
@@ -371,7 +398,9 @@ class Monitor {
         this.betRequestParams.BetOrderNo = bet_order_no;
         this.betRequestParams.BetTeam = bet_team;
         this.betRequestParams.BetMoney = bet_money;
-        this.betNow();
+        this.checkOddsClickable();
+
+        this.stopMonitorDetail()
 
         this.log(`服务器回复下注，下注金额${bet_money}，立即投注`, true)
       } else if (bet_status === "3") {
@@ -385,73 +414,32 @@ class Monitor {
     }
   }
 
+  checkOddsClickable(){
+    const team = this.betRequestParams.BetTeam;
+
+    // 盘口赔率
+    const teamOdds = this.TeamNameToOddsNode[team].innerText
+
+    if(teamOdds === ""){
+      this.debugger && console.log("未查询到下注盘口");
+      // 不可以, 继续监控
+      this.startMonitorList()
+    }else{
+      this.debugger && console.log("点击下注盘口:", $node);
+      // 盘口点击
+      this.TeamNameToOddsNode[team].click();
+    }
+  }
+
+  showKeyBoard(){
+    $(".qbs-StakeBox_StakeInput").click()
+  }
+
   /**
    * 立即下注
    */
   async betNow() {
     try{
-      const team = this.betRequestParams.BetTeam;
-      const money = this.betRequestParams.BetMoney;
-
-      let $ipeMarkets = $(".sip-MarketGroup");
-      let $node = null; // 下注球队的节点
-
-      this.debugger && console.log("length:", $ipeMarkets.length);
-      for (let i = 0; i < $ipeMarkets.length; i++) {
-        const $market = $($ipeMarkets[i]);
-        const text = $market.find(".sip-MarketGroupButton_Text").text();
-        const type = $market.find(".srb-ParticipantLabel_Name").text();
-
-        const $lastCol = $market.find(".gl-Market_General-lastinrow");
-        const $firstCol = $lastCol.prev();
-
-        // const $ipeOddName = $market.find(".ipe-Participant_OppName");
-
-        if (text === "比赛投注" && type.indexOf("强弱盘赔率") >= 0) {
-          this.debugger && console.log("获取到[比赛获胜]盘口");
-          if ($firstCol.find(".gl-MarketColumnHeader").text() === team) {
-            $node = $firstCol.find(".srb-ParticipantCenteredStackedMarketRow").last();
-          }
-
-          if ($lastCol.find(".gl-MarketColumnHeader").text() === team) {
-            $node = $lastCol.find(".srb-ParticipantCenteredStackedMarketRow").last();
-          }
-
-          this.debugger && console.log("text:", text);
-          this.debugger && console.log("text0:", $firstCol.find(".gl-MarketColumnHeader").text());
-          this.debugger && console.log("text1:", $lastCol.find(".gl-MarketColumnHeader").text());
-        }
-      }
-
-      await this.sleep(800);
-
-      // 盘口是否可以点击下注
-      this.debugger && console.log(
-        "盘口是否可以点击:",
-        $node === null || $($node).hasClass("srb-ParticipantCenteredStackedMarketRow_Suspended"),
-        $($node).attr("class")
-      );
-      if ($node === null || $($node).hasClass("srb-ParticipantCenteredStackedMarketRow_Suspended")) {
-        this.debugger && console.log("未查询到下注盘口");
-        // 不可以, 继续监控
-        this.remonitor()
-        return;
-      } else {
-        // 可以
-        this.debugger && console.log("点击下注盘口:", $node);
-        $($node).click();
-
-        // this.betRequestParams.BetOdds = $($node).find(".ipe-Participant_OppOdds").text()
-      }
-
-      await this.sleep(800);
-
-      // 下注弹层未展示，重新调用
-      if(!$(".bsm-BetslipStandardModule").hasClass("bsm-BetslipStandardModule_QuickBetExpanded")){
-        this.debugger && console.log("投注弹层未展示，继续点击盘口", $(".bsm-BetslipStandardModule"))
-        this.betNow()
-        return;
-      }
 
       // 设置金额
       this.debugger && console.log("设置金额:", money);
@@ -505,7 +493,7 @@ class Monitor {
             this.refreshAmount()
 
             setTimeout(()=>{
-              this.remonitor()
+              this.this.startMonitorList()()
               this.betCompelete()
             }, 1000);
           } else if (btnText === "投注项已无效") {
@@ -537,7 +525,7 @@ class Monitor {
           $(".qbs-NormalBetItem_IndicationArea").click();
 
           // 继续监控
-          this.remonitor()
+          this.this.startMonitorList()()
         }
       }, 1000);
     }catch(err){
@@ -615,13 +603,6 @@ class Monitor {
     if (_text) {
       this.ignoreGame.push(_text);
     }
-  }
-
-  // 重新监控
-  remonitor() {
-    chrome.runtime.sendMessage({
-      event: "event-remonitor"
-    });
   }
 
   // 刷新剩余金额

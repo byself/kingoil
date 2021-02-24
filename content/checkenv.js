@@ -10,13 +10,22 @@ class CheckEnv {
   }
 
   check() {
-    const result = []
-    if (this.isValidUrl() && this.isMobileMode()) {
-      result.push('success')
+    const result = [
+      {
+        iconType: "check"
+      },
+      {
+        iconType: "check"
+      }
+    ]
+    if (this.isValidUrl()) {
+      console.log("url success")
+      result[0].iconType = "success"
     }
 
     if (this.isLogin()) {
-      result.push('success')
+      console.log("login success")
+      result[1].iconType = "success"
     }
 
     // if (this.isBasketballTab()) {
@@ -45,7 +54,7 @@ class CheckEnv {
    * 根据页面上是否有“我的投注”标签判断是否已登录
    */
   isLogin() {
-    return document.querySelector('.hm-MainHeaderRHSLoggedInNarrow_MyBetsLabel')
+    return document.querySelector('.hm-HeaderMenuItemMyBets')
   }
 
   /**

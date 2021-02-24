@@ -1,14 +1,17 @@
 const Bet = {
   // $store: new Store(),
+  $utils: utils,
   $monitor: new Monitor(),
   $checkenv: new CheckEnv(),
   $uploadmatchdata: new UploadMatchData(),
-  debugger: false
+  debugger: true
 }
 
 // 注意，必须设置了run_at=document_start 此段代码才会生效
 document.addEventListener('DOMContentLoaded', function() {
   log('DOMContentLoaded')
+  Bet.$monitor.monitorSwitchGame()
+
   chrome.runtime.onMessage.addListener(messageHandler)
 
   // 每隔60分钟跳转至篮球
@@ -23,11 +26,8 @@ function messageHandler(request, sender, sendResponse) {
   log('messageHandler:', request.event)
   try{
     switch (request.event) {
-      case 'event-begin-list-monitor':
-        beginListMonitorHandler(request, sender, sendResponse)
-        break
-      case 'event-begin-detail-monitor':
-        beginDetailMonitorHandler(request, sender, sendResponse)
+      case 'event-begin-monitor':
+        beginMonitorHandler()
         break
       case 'event-check-env':
         checkEnvHandler(request, sender, sendResponse)
@@ -68,9 +68,12 @@ function uploadmatchData(request, sender, sendResponse) {
 function checkEnvHandler(request, sender, sendResponse) {
   const result = Bet.$checkenv.check()
 
-  if(result.length === 2){
+  // result[2].username = getUserName()
+
+  if(result.length === 3){
     jumpBasketball()
   }
+
   log('content checkEnvHandler:', result)
   sendResponse(result)
 }
@@ -82,7 +85,7 @@ function checkEnvHandler(request, sender, sendResponse) {
  * @param {*} sendResponse
  */
 function getAmount(request, sender, sendResponse) {
-  const amount = document.querySelector('.hm-MainHeaderMembersNarrow_Balance')
+  const amount = document.querySelector('.hm-MainHeaderMembersWide_Balance')
     .innerText
   sendResponse(amount)
 }
@@ -93,60 +96,37 @@ function getAmount(request, sender, sendResponse) {
  * @param {*} sender
  * @param {*} sendResponse
  */
-function getUserName(request, sender, sendResponse) {
-  let $wraperNode = document.querySelector('.hm-MainHeaderMembersNarrow');
-  $wraperNode.click();
-  let hasGetName = false;
-
-  let timer = setInterval(() => {
-    let $nameNode = document.querySelector('.um-UserInfo_UserName');
-
-    if(hasGetName){
-      if($nameNode){
-        $wraperNode.click();
-      }else{
-        clearInterval(timer);
-      }
-    }else{
-      if($nameNode){
-        let username = $nameNode.innerText;
-        log("getUserName", username)
-        if(username){
-          chrome.runtime.sendMessage(
-            {
-              event: "event-get-username",
-              data: {
-                username: username
-              }
-            }
-          );
-          $wraperNode.click();
-          hasGetName = true;
-          // 
+async function getUserName(request, sender, sendResponse){
+  let $wraperNode = document.querySelector('.hm-MainHeaderMembersWide_MembersMenuIcon');
+  Bet.$utils.domReady(".um-UserInfo_UserName", (element) => {
+    chrome.runtime.sendMessage(
+      {
+        event: "event-get-username",
+        data: {
+          username: element.innerText
         }
       }
-    }
-    
-  }, 100)
+    );
+
+    // close menu
+    $wraperNode.click();
+  })
+
+  // show menu
+  $wraperNode.click();
 }
 
 /**
  * 列表页监控
  */
-function beginListMonitorHandler() {
-  // 当前页面是篮球列表页
-  if (window.location.hash.indexOf('#/IP/B18') === 0) {
+function beginMonitorHandler() {
+  setInterval(() => {
     Bet.$monitor.list()
-  }
-}
-
-/**
- * 详情页监控
- */
-function beginDetailMonitorHandler() {
-  if (window.location.hash.indexOf('#/IP/E') === 0) {
+  }, 1000 * 10);
+  
+  setInterval(() => {
     Bet.$monitor.detail()
-  }
+  }, 1000);
 }
 
 function jumpBasketball(){

@@ -9,25 +9,13 @@ const CommonOps = {
   username: '', // 用户名
   amount: '', // 账户金额
 
-  debugger: false,
-
-  //监控状态，true:监控中，false:未监控；在更新投标方式重新监控时使用
-  monitorStatus: false,
-
-  // 列表页监控定时器
-  listMonitorTimer: null,
-
-  // 列表页监控定时器时间间隔
-  listMonitorDelay: 10000,
-
-  // 详情页监控定时器
-  detailMonitorTimer: null,
-
-  // 详情页监控定时器时间间隔
-  detailMonitorDelay: 1000,
+  debugger: true,
 
   // 投注成功上报参数
-  betRequestParams:{}
+  betRequestParams:{},
+
+  // 登陆返回值
+  loginStatus:{}
 }
 
 // 运营日志
@@ -78,6 +66,7 @@ async function uploadMatchData() {
  * 检测环境
  */
 async function checkEnv() {
+  queryUserName()
   const activeTabId = await Bet.$utils.getCurrentTabId()
   const result = await new Promise((resolve, reject) => {
     console.log('background checkEnv activeTabId:', activeTabId)
@@ -91,24 +80,22 @@ async function checkEnv() {
 
   CommonOps.debugger && console.log('background checkEnv:', result)
 
-  // 环境检测成功，开始上报数据
-  // if (result.length === 3) {
-  //   // uploadMatchData()
-  // }
-
   return result
+}
+
+function autoLogin(){
+    return CommonOps.loginStatus;
 }
 
 /**
  * 登录插件
  */
-async function login(username, password) {
-  CommonOps.debugger && console.log('background login')
+async function login() {
+  CommonOps.debugger && console.log('background login', CommonOps.username)
   const res = await Bet.$ajax.get({
-    url: '/Login.aspx',
+    url: '/LoginExt.aspx',
     data: {
-      UserName: username,
-      Password: password
+      UserName: CommonOps.username,
     }
   })
 
@@ -116,10 +103,12 @@ async function login(username, password) {
 
   if (_res.return_code === '0') {
     CommonOps.uid = _res.uid
-    queryUserName()
+    CommonOps.loginStatus.iconType = "success"
+    CommonOps.loginStatus.error = ''
+  }else{
+    CommonOps.loginStatus.iconType = "check"
+    CommonOps.loginStatus.error = _res._res
   }
-
-  return _res
 }
 
 /**
@@ -174,6 +163,7 @@ function getUserName(res) {
   CommonOps.debugger && console.log('getUserName', res);
   if(res.data.username){
     CommonOps.username = res.data.username;
+    login()
   }
 }
 
@@ -245,32 +235,8 @@ function savePlanId(id) {
  * 监控开始
  */
 async function beginMonitor() {
-  CommonOps.debugger && console.log('monitorStatus:', CommonOps.monitorStatus)
-  if (CommonOps.monitorStatus) return
-  CommonOps.monitorStatus = true
-
   const activeTabId = await Bet.$utils.getCurrentTabId()
-
-  // 列表页
-  CommonOps.listMonitorTimer = setInterval(function() {
-    chrome.tabs.sendMessage(activeTabId, { event: 'event-begin-list-monitor' })
-  }, CommonOps.listMonitorDelay)
-
-  // 详情页
-  CommonOps.detailMonitorTimer = setInterval(function() {
-    chrome.tabs.sendMessage(activeTabId, {
-      event: 'event-begin-detail-monitor'
-    })
-  }, CommonOps.detailMonitorDelay)
-}
-
-/**
- * 监控结束
- */
-function stopMonitor() {
-  clearInterval(CommonOps.listMonitorTimer)
-  clearInterval(CommonOps.detailMonitorTimer)
-  CommonOps.monitorStatus = false
+  chrome.tabs.sendMessage(activeTabId, { event: 'event-begin-monitor' })
 }
 
 /**
@@ -284,9 +250,6 @@ function messageHandler(request, sender, sendResponse) {
   switch (request.event) {
     case 'event-bet-require':
       queryBetStatus(request, sender, sendResponse)
-      break
-    case 'event-remonitor':
-      beginMonitor()
       break
     case 'event-bet-success':
       betSuccessReq(request)
@@ -328,11 +291,6 @@ async function queryBetStatus(request, sender, sendResponse) {
     _res = JSON.parse(res);
   }catch(err){
     _res = res
-  }
-
-  // 详情页接口判断立即投注时暂定监控
-  if (_res.return_code === '0' && _res.return_data.bet_status === '1') {
-    stopMonitor()
   }
 
   CommonOps.debugger && console.log('background queryBetStatus:', _res)
