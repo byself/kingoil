@@ -19,18 +19,18 @@
 class Monitor {
   constructor() {
     // 场次规则
-    // this.gameRules = ["第4节", "下半场", "加时"];
+    this.gameRules = ["第4节", "下半场", "加时"];
 
-    // // 时间规则(秒)：最后2分钟-最后1分钟时间段
-    // this.timeRules = [60, 100];
+    // 时间规则(秒)：最后2分钟-最后1分钟时间段
+    this.timeRules = [60, 100];
 
-    // // 分数规则：比分差不大于8分
-    // this.scoreRules = 8;
+    // 分数规则：比分差不大于8分
+    this.scoreRules = 8;
 
     // mock
-    this.gameRules = ["第2节", "第3节", "第4节", "下半场", "加时"];
-    this.timeRules = [60, 600];
-    this.scoreRules = 10;
+    // this.gameRules = ["第3节", "第4节", "下半场", "加时"];
+    // this.timeRules = [60, 500];
+    // this.scoreRules = 10;
     
     // 满足条件的候选比赛
     this.alternativeGame = [];
@@ -58,12 +58,19 @@ class Monitor {
 
     this.$ajax = new Api();
 
-    this.gameInfo = {
-      groupName: ""
-    };
-
     this.isMonitorList = true;
     this.isMonitorDetail = false;
+
+    this.TeamNameToOddsNode = {}
+
+    this.canMinitorDetail = false
+
+    // 选中的比赛的node
+    this.selectedTeamNode = null
+
+    // 点击盘口定时器
+    // 如果点击盘口弹窗为弹出，间隔一定时间后再次点击；并在弹窗弹出后的回调中清除定时器
+    this.timerOddsNode = null
   }
 
   startMonitorList(){
@@ -125,9 +132,11 @@ class Monitor {
    * 列表页监控
    */
   list() {
+    
+    this.debugger && console.log("========================list begin========================:", this.isMonitorList);
+
     if(!this.isMonitorList) return;
 
-    this.debugger && console.log("========================list begin========================");
     this.debugger && console.log("list ignoreGame:", this.ignoreGame);
 
     // 清空候选比赛
@@ -229,26 +238,16 @@ class Monitor {
 
     //取第一个元素点击进入
     if (this.alternativeGame.length) {
-      const $teanName = this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay_TeamName");
+      this.selectedTeamNode = this.alternativeGame[0];
+      const $teanName = this.selectedTeamNode.find(".ovm-FixtureDetailsTwoWay_TeamName");
       const selectedTeamAName = $teanName[0].innerText;
       const selectedTeamBName = $teanName[1].innerText;
       this.log(`数据监控，总共${this.alternativeGame.length}只猎物，进入[${selectedTeamAName} vs ${selectedTeamBName}]进行详细监控`)
 
-      this.gameInfo.groupName = this.alternativeGame[0].parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text()
-      this.alternativeGame[0].find(".ovm-MediaIconContainer_Buttons").click()
+      this.selectedTeamNode.find(".ovm-MediaIconContainer_Buttons").click()
+      this.canMinitorDetail = true;
+      // this.stopMonitorDetail()
 
-      // 获取联赛名称
-      this.BallGroupName = this.alternativeGame[0].parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text()
-      this.ATeamOddsNode = this.alternativeGame[0].find(".ovm-ParticipantOddsOnly_Odds")[0]
-      this.BTeamOddsNode = this.alternativeGame[0].find(".ovm-ParticipantOddsOnly_Odds")[1]
-
-      const ATeamName = this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay_TeamName")[0].innerText;
-      const BTeamName = this.alternativeGame[0].find(".ovm-FixtureDetailsTwoWay_TeamName")[1].innerText;
-      this.TeamNameToOddsNode[ATeamName] = this.ATeamOddsNode
-      this.TeamNameToOddsNode[BTeamName] = this.BTeamOddsNode
-
-      this.stopMonitorList()
-      this.startMonitorDetail()
     }else{
       this.log(`数据监控，无猎物`)
       this.reload()
@@ -258,14 +257,47 @@ class Monitor {
   monitorSwitchGame(){
     // 监听比赛详情信息变化
     utils.domReady(".lsb-ScoreBasedScoreboard_Team1Container", (element) => {
-      console.log("domReady:", element)
+      this.debugger && console.log("domReady: 切换比赛", element);
       if(!$(".lv-ButtonBar").hasClass("Hidden")){
         document.querySelector(".lv-ButtonBar_MatchLiveIcon").click()
       }
+
+      if(this.canMinitorDetail){
+        this.stopMonitorList()
+        this.startMonitorDetail()
+      }
+    })
+
+    utils.domReady(".qbs-QuickBetHeader_BetReference", (element) => {
+      this.debugger && console.log("domReady: 投注成功", element);
+      this.betSuccess()
+
+      element.ready = false;
+    })
+
+    utils.domReady(".qbs-AcceptButton_Text", (element) => {
+      this.debugger && console.log("domReady: 投注赔率变化", element);
+      // this.betResult(document.querySelector(".qbs-QuickBetHeader_MessageBody"))
+      this.betOddsChange()
+
+      element.ready = false;
     })
 
     utils.domReady(".qbs-NormalBetItem_Title", (element) => {
-      this.showKeyBoard()
+      this.debugger && console.log("domReady: 投注弹窗", element);
+      clearInterval(this.timerOddsNode);
+      this.confirmBetButton()
+
+      element.ready = false;
+    })
+
+    // 刷新金额
+    utils.domReady(".um-BalanceRefreshButton_Icon", (element) => {
+      this.debugger && console.log("domReady: 刷新金额", element);
+      this.getUserName()
+      this.refreshAmount(element)
+
+      element.ready = false;
     })
   }
 
@@ -273,9 +305,17 @@ class Monitor {
    * 详情页监控
    */
   async detail() {
-    if(!this.isMonitorDetail) return;
+    
+    this.debugger && console.log("========================detail begin========================:", this.isMonitorDetail);
+    
+    // 如果出现异常情况，导致isMonitorList、isMonitorDetail都为false时，强制重新监听detail
+    if(this.isMonitorDetail === false && this.isMonitorList === false){
+      this.stopMonitorList()
+      this.startMonitorDetail()
+    }
 
-    this.debugger && console.log("========================detail begin========================");
+    if(!this.isMonitorDetail) return;
+    
     const RemainingTime = $(".ml18-BasketballClock_Clock").text();
 
     // 详情页时间小于60s，返回列表页
@@ -294,8 +334,15 @@ class Monitor {
     const HasVideo = $(".ml18-BasketballCourt_SVG")[0] ? 1 : 0;
 
     // 盘口获取赔率
-    let ATeamOdds = this.ATeamOddsNode.innerText;
-    let BTeamOdds = this.BTeamOddsNode.innerText;
+    let ATeamOdds = '';
+    let BTeamOdds = '';
+    const ATeamOddsNode = this.selectedTeamNode.find(".ovm-ParticipantOddsOnly")[0]
+    const BTeamOddsNode = this.selectedTeamNode.find(".ovm-ParticipantOddsOnly")[1]
+
+    if(ATeamOddsNode){
+      ATeamOdds = ATeamOddsNode.innerText;
+      BTeamOdds = BTeamOddsNode.innerText;
+    }
 
     // 如果赔率为空，表示“强弱盘赔率”盘口没有数据，结束本次监控
     if (ATeamOdds === '' && BTeamOdds === '') {
@@ -327,8 +374,10 @@ class Monitor {
     const ATeamFt = $(".ml-DualStat_Percentage")[0] ? $(".ml-DualStat_Percentage")[0].innerText : "";
     const BTeamFt = $(".ml-DualStat_Percentage")[1] ? $(".ml-DualStat_Percentage")[1].innerText : "";
 
+    const BallGroupName =  this.selectedTeamNode.parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text() 
+
     const data = {
-      BallGroupName: this.BallGroupName,
+      BallGroupName: BallGroupName,
       ATeamName,
       BTeamName,
       ATeamScore,
@@ -373,14 +422,16 @@ class Monitor {
     }else{
       this.betRequestParams = data;
 
+      data.AccountBalance = document.querySelector('.hm-MainHeaderMembersWide_Balance').innerText.slice(1)
+
       chrome.runtime.sendMessage(
         {
           event: "event-bet-require",
           data: data
         },
         res => {
+          this.debugger && console.log("betReqResult:",res);
           this.betReqResult(res);
-          this.debugger && console.log(res);
         }
       );
     }
@@ -392,6 +443,7 @@ class Monitor {
    * @param {Object} res
    */
   betReqResult(res) {
+    this.debugger && console.log("betReqResult");
     if (res.return_code === "0") {
       const { bet_status, bet_team, bet_money, bet_order_no } = res.return_data;
       if (bet_status === "1") {
@@ -414,20 +466,49 @@ class Monitor {
     }
   }
 
-  checkOddsClickable(){
-    const team = this.betRequestParams.BetTeam;
+  // 球队名称映射盘口节点
+  mapTeamNameToOddsNode(node){
 
+    // A对盘口节点
+    const ATeamOddsNode = node.find(".ovm-ParticipantOddsOnly")[0]
+
+    // B对盘口节点
+    const BTeamOddsNode = node.find(".ovm-ParticipantOddsOnly")[1]
+
+    // A对名称
+    const ATeamName = node.find(".ovm-FixtureDetailsTwoWay_TeamName")[0].innerText;
+
+    // B对名称
+    const BTeamName = node.find(".ovm-FixtureDetailsTwoWay_TeamName")[1].innerText;
+
+    const mapOpts = {}
+    mapOpts[ATeamName] = ATeamOddsNode
+    mapOpts[BTeamName] = BTeamOddsNode
+
+    return mapOpts;
+  }
+
+  checkOddsClickable(){
+    this.debugger && console.log("checkOddsClickable");
+    const team = this.betRequestParams.BetTeam;
+    const mapNameToOdds = this.mapTeamNameToOddsNode(this.selectedTeamNode);
+    this.debugger && console.log(team, mapNameToOdds);
     // 盘口赔率
-    const teamOdds = this.TeamNameToOddsNode[team].innerText
+    const teamOdds = mapNameToOdds[team].innerText
 
     if(teamOdds === ""){
       this.debugger && console.log("未查询到下注盘口");
       // 不可以, 继续监控
-      this.startMonitorList()
+      this.startMonitorDetail()
     }else{
-      this.debugger && console.log("点击下注盘口:", $node);
+      this.debugger && console.log("点击下注盘口:", mapNameToOdds, team);
       // 盘口点击
-      this.TeamNameToOddsNode[team].click();
+      mapNameToOdds[team].click();
+
+      // 2s为弹出弹窗，再次点击
+      this.timerOddsNode = setInterval(() => {
+        mapNameToOdds[team].click();
+      }, 2000);
     }
   }
 
@@ -435,106 +516,48 @@ class Monitor {
     $(".qbs-StakeBox_StakeInput").click()
   }
 
-  /**
-   * 立即下注
-   */
-  async betNow() {
-    try{
+  // 点击投注
+  confirmBetButton(){
+    this.debugger && console.log("confirmBetButton");
+    $(".qbs-PlaceBetButton, .qbs-AcceptButton").click();
+  }
 
-      // 设置金额
-      this.debugger && console.log("设置金额:", money);
-      this.debugger && console.log("弹出数字键盘")
-      $(".qbs-StakeBox_StakeInput").click()
+  // 赔率变化
+  betOddsChange(){
+    this.debugger && console.log("投注赔率变化");
+    const statusText = $(".qbs-QuickBetHeader_MessageBody").text()
 
-      // await this.sleep(800);
+    this.debugger && console.log("statusText：", statusText);
+    if(statusText && statusText !== "已投注"){
+      // 取消投注
+      $(".qbs-NormalBetItem_IndicationArea").click();
 
-      const moneyArr = money.split("");
-      this.debugger && console.log("金额拆分数组:", moneyArr)
-      for(let i = 0; i < moneyArr.length; i++){
-        let index = moneyArr[i]-1;
-        // 如果是数字0，需要定位到第10的位置
-        if(index === -1){
-          index = 9
-        }
-        this.debugger && console.log("按键:", index)
-        $(".qbs-NumberButton")[index].click()
-      }
-
-      // await this.sleep(800);
-
-      this.debugger && console.log("确认下注");
-
-      $(".qbs-PlaceBetButton, .qbs-AcceptButton").click();
-
-      // 是否在提交处理中
-      let count = 1;
-      let timer = setInterval(async () => {
-        this.debugger && console.log("count:", count);
-        if (count <= 30) {
-          const btnText = $(".qbs-QuickBetHeader_MessageBody").text();
-          const btnText2 = $(".qbs-AcceptButton_PlaceBet").text();
-          this.debugger && console.log("btnText:", btnText);
-          this.debugger && console.log("btnText2:", btnText2);
-          if (btnText === "已投注") {
-            // 投注成功
-            clearInterval(timer);
-            
-            // 投注成功，上报接口
-            this.betRequestParams.ReturnMoney = $(".qbs-PlaceBetButton_ReturnValue").text().slice(1);
-            this.betRequestParams.BetOdds = $(".bsc-OddsDropdownLabel").text()
-            this.betSuccess();
-
-            await this.sleep(800);
-
-            // 点击完成，收起弹层，否则返回列表页时依然展示
-            $(".qbs-QuickBetHeader_DoneButton").click();
-
-            // 刷新剩余金额
-            this.refreshAmount()
-
-            setTimeout(()=>{
-              this.this.startMonitorList()()
-              this.betCompelete()
-            }, 1000);
-          } else if (btnText === "投注项已无效") {
-            // 设置count >= 10, 下次循环走else逻辑
-            count = 30;
-          } else if (btnText === "您所选投注项的赔率已经产生变化" && btnText2 === "投注") {
-            // 继续投注需要检测比赛时间是否满足条件，详情页时间小于60s，返回列表页
-            const RemainingTime = $(".ml18-ScoreHeaderBasketball_Clock").text();
-            const _RemainingTime = this.formatTime(RemainingTime);
-            if (_RemainingTime < this.timeRules[0]) {
-              clearInterval(timer);
-              this.betCompelete();
-            } else {
-              // await this.sleep(800);
-              // $(".qbs-AcceptButton").click();
-              // count = 0;
-
-              count = 30; // 设置count >= 30, 下次循环走else逻辑
-            }
-          }else {
-          }
-
-          count++;
-        } else {
-          this.debugger && console.log("取消投注");
-          clearInterval(timer);
-
-          // 取消投注
-          $(".qbs-NormalBetItem_IndicationArea").click();
-
-          // 继续监控
-          this.this.startMonitorList()()
-        }
-      }, 1000);
-    }catch(err){
-      this.debugger && console.log("betNow:", err);
-      this.betNow()
+      // 继续监控
+      this.startMonitorDetail()
     }
   }
 
-  betSuccess() {
+  /**
+   * 投注成功
+   */
+  betSuccess(){
+    this.debugger && console.log("betSuccess");
+    this.reportOrder()
+
+    $(".qbs-QuickBetHeader_DoneButton").click();
+
+    this.betCompelete()
+
+    // open
+    this.clickMenu()
+  }
+
+  // 投注成功后上报数据
+  reportOrder() {
+    this.debugger && console.log("reportOrder");
+    this.betRequestParams.ReturnMoney = $(".qbs-PlaceBetButton_ReturnValue").text().slice(1);
+    this.betRequestParams.BetOdds = $(".bsc-OddsDropdownLabel").text()
+
     const data = {
       BetOrderNo: this.betRequestParams.BetOrderNo,
       BetOdds: this.betRequestParams.BetOdds,
@@ -542,7 +565,7 @@ class Monitor {
     };
 
     chrome.runtime.sendMessage({
-      event: "event-bet-success",
+      event: "event-report-order",
       data: data
     });
 
@@ -553,6 +576,7 @@ class Monitor {
    * 放弃投注
    */
   betGiveup() {
+    this.debugger && console.log("betGiveup");
     this.betCompelete();
   }
 
@@ -560,10 +584,12 @@ class Monitor {
    * 投注完成：
    */
   betCompelete() {
+    this.debugger && console.log("betCompelete");
     this.updateIgnoreGame();
     this.stayBeginTime = Date.now()
 
-    window.history.back();
+    this.startMonitorList()
+    this.stopMonitorDetail()
   }
 
   /**
@@ -597,7 +623,7 @@ class Monitor {
    * 更新忽略比赛数组
    */
   updateIgnoreGame() {
-
+    this.debugger && console.log("updateIgnoreGame");
     const _text = this.betRequestParams.ATeamName + this.betRequestParams.BTeamName;
 
     if (_text) {
@@ -605,26 +631,27 @@ class Monitor {
     }
   }
 
-  // 刷新剩余金额
-  refreshAmount() {
-
-    let $wraperNode = document.querySelector('.hm-MainHeaderMembersNarrow');
-
+  clickMenu(){
+    this.debugger && console.log("clickMenu");
+    let $wraperNode = document.querySelector('.hm-MainHeaderMembersWide_MembersMenuIcon');
     // open
     $wraperNode.click();
+  }
 
-    this.sleep(200);
+  // 刷新剩余金额
+  refreshAmount(element) {
+    this.debugger && console.log("refreshAmount");
 
     // 刷新按钮
-    $(".um-BalanceRefreshButton").click();
+    element.click();
 
-    this.sleep(200);
+    // 等待刷新金额
+    this.sleep(1000);
 
-    const amount = document.querySelector('.hm-MainHeaderMembersNarrow_Balance')
-    .innerText
+    // 再次点击关闭menu
+    this.clickMenu()
 
-    // close
-    $wraperNode.click();
+    const amount = document.querySelector('.hm-MainHeaderMembersWide_Balance').innerText
 
     chrome.runtime.sendMessage({
       event: "event-refresh-amount",
@@ -632,6 +659,20 @@ class Monitor {
         amount: amount
       }
     });
+  }
+
+  getUserName(){
+    console.log("getUserName inner")
+
+    const username = $(".um-UserInfo_UserName").text()
+    chrome.runtime.sendMessage(
+      {
+        event: "event-get-username",
+        data: {
+          username: username
+        }
+      }
+    );
   }
 
   sleep(time = 1000) {

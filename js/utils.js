@@ -25,7 +25,7 @@ const utils = {
         observer = new MutationObserver(check);
         observer.observe(doc.documentElement, {
           childList: true,
-          subtree: true
+          subtree: true,
         });
       }
       // 检查该节点是否已经在DOM中
@@ -33,14 +33,17 @@ const utils = {
     }
   
     function check(){
+      
     // 检查是否匹配已储存的节点
-      for(var i = 0; i < listeners.length; i++){
-        var listener = listeners[i];
+      for(let i = 0; i < listeners.length; i++){
+        let listener = listeners[i];
         // 检查指定节点是否有匹配
-        var elements = doc.querySelectorAll(listener.selector);
-        for(var j = 0; j < elements.length; j++){
-          var element = elements[j];
+        let elements = doc.querySelectorAll(listener.selector);
+        // console.log("check1", elements, elements[0] && elements[0].ready)
+        for(let j = 0; j < elements.length; j++){
+          let element = elements[j];
           // 确保回调函数只会对该元素调用一次
+          // console.log("check2", element, JSON.stringify(element.ready))
           if(!element.ready){
             element.ready = true;
             // 对该节点调用回调函数

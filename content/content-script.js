@@ -7,13 +7,24 @@ const Bet = {
   debugger: true
 }
 
+// 切换tab，停止监听
+window.addEventListener("hashchange", function(){
+  console.log("==============hashchange================")
+  if(location.hash === "#/IP/B18"){
+    Bet.$monitor.startMonitorList()
+    Bet.$monitor.stopMonitorDetail()
+  }else{
+    Bet.$monitor.stopMonitorList()
+    Bet.$monitor.stopMonitorDetail()
+  }
+});
+
 // 注意，必须设置了run_at=document_start 此段代码才会生效
 document.addEventListener('DOMContentLoaded', function() {
   log('DOMContentLoaded')
   Bet.$monitor.monitorSwitchGame()
-
   chrome.runtime.onMessage.addListener(messageHandler)
-
+  // Bet.$monitor.monitorSwitchGame()
   // 每隔60分钟跳转至篮球
   // 解决问题：篮球从无到有时无法自动切换的问题
   setInterval(function(){
@@ -23,11 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
 })
 
 function messageHandler(request, sender, sendResponse) {
-  log('messageHandler:', request.event)
+  // log('messageHandler:', request.event)
   try{
     switch (request.event) {
-      case 'event-begin-monitor':
-        beginMonitorHandler()
+      case 'event-begin-list-monitor':
+        Bet.$monitor.list()
+        break
+      case 'event-begin-detail-monitor':
+        Bet.$monitor.detail()
         break
       case 'event-check-env':
         checkEnvHandler(request, sender, sendResponse)
@@ -68,9 +82,7 @@ function uploadmatchData(request, sender, sendResponse) {
 function checkEnvHandler(request, sender, sendResponse) {
   const result = Bet.$checkenv.check()
 
-  // result[2].username = getUserName()
-
-  if(result.length === 3){
+  if(result.length === 2){
     jumpBasketball()
   }
 
@@ -97,39 +109,31 @@ function getAmount(request, sender, sendResponse) {
  * @param {*} sendResponse
  */
 async function getUserName(request, sender, sendResponse){
+  console.log("getUserName outer")
   let $wraperNode = document.querySelector('.hm-MainHeaderMembersWide_MembersMenuIcon');
-  Bet.$utils.domReady(".um-UserInfo_UserName", (element) => {
-    chrome.runtime.sendMessage(
-      {
-        event: "event-get-username",
-        data: {
-          username: element.innerText
-        }
-      }
-    );
+  // Bet.$utils.domReady(".um-UserInfo_UserName", (element) => {
+  //   console.log("getUserName inner")
+  //   chrome.runtime.sendMessage(
+  //     {
+  //       event: "event-get-username",
+  //       data: {
+  //         username: element.innerText
+  //       }
+  //     }
+  //   );
 
-    // close menu
-    $wraperNode.click();
-  })
+  //   element.ready = false;
+
+  //   // close menu
+  //   $wraperNode.click();
+  // })
 
   // show menu
   $wraperNode.click();
 }
 
-/**
- * 列表页监控
- */
-function beginMonitorHandler() {
-  setInterval(() => {
-    Bet.$monitor.list()
-  }, 1000 * 10);
-  
-  setInterval(() => {
-    Bet.$monitor.detail()
-  }, 1000);
-}
-
 function jumpBasketball(){
+  log('jumpBasketball')
   window.location.hash = "/IP/B18"
 }
 

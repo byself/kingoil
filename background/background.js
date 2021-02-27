@@ -199,7 +199,7 @@ async function getRunData() {
 /**
  * 上报“投注成功”数据
  */
-async function betSuccessReq(request) {
+async function reportOrder(request) {
   CommonOps.debugger && console.log('background betSuccessReq:', request.data || CommonOps.betRequestParams)
 
   if (CommonOps.betRequestParams.BetOrderNo !== request.data.BetOrderNo) {
@@ -218,7 +218,7 @@ async function betSuccessReq(request) {
 
   // 上报失败重新上报
   if (_res.return_code !== '0') {
-    betSuccessReq()
+    reportOrder()
   }
 
   return _res
@@ -235,9 +235,22 @@ function savePlanId(id) {
  * 监控开始
  */
 async function beginMonitor() {
+  CommonOps.debugger && console.log('monitorStatus:', CommonOps.monitorStatus)
   const activeTabId = await Bet.$utils.getCurrentTabId()
-  chrome.tabs.sendMessage(activeTabId, { event: 'event-begin-monitor' })
+
+  // 列表页
+  setInterval(function() {
+    chrome.tabs.sendMessage(activeTabId, { event: 'event-begin-list-monitor' })
+  }, 1000 * 10)
+
+  // 详情页
+  setInterval(function() {
+    chrome.tabs.sendMessage(activeTabId, {
+      event: 'event-begin-detail-monitor'
+    })
+  }, 1000)
 }
+
 
 /**
  * 接收监听事件
@@ -251,8 +264,8 @@ function messageHandler(request, sender, sendResponse) {
     case 'event-bet-require':
       queryBetStatus(request, sender, sendResponse)
       break
-    case 'event-bet-success':
-      betSuccessReq(request)
+    case 'event-report-order':
+      reportOrder(request)
       break
     case 'event-get-username':
         getUserName(request)
@@ -271,14 +284,11 @@ async function queryBetStatus(request, sender, sendResponse) {
     queryUserName()
   }
 
-  // 获取最新剩余额度
-  getAmount()
   const data = {
     UID: CommonOps.uid,
     BetPlanID: CommonOps.planId,
     ...request.data,
     Account:  CommonOps.username,
-    AccountBalance: CommonOps.amount.slice(1).replaceAll(/,/g, "")
   }
   const res = await Bet.$ajax.get({
     url: '/BetReq.aspx',

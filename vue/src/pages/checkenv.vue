@@ -77,9 +77,12 @@ export default {
 
       setTimeout(() => {
         const {iconType, error} = $background.autoLogin();
-        this.checkItems[2].iconType = iconType
-        this.checkItems[2].error = error
 
+        if(iconType){
+          this.checkItems[2].iconType = iconType
+          this.checkItems[2].error = error
+        }
+      
         if(this.checkItems[0].iconType === "success" && this.checkItems[1].iconType === "success" && this.checkItems[2].iconType === "success"){
           this.checkSuccess();
         }
@@ -95,7 +98,7 @@ export default {
         }else{
           this.$router.push("/bet/plan");
         }
-      }, 1000)
+      }, 500)
     }
   }
 };
