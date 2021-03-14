@@ -4,7 +4,7 @@ const Bet = {
   $monitor: new Monitor(),
   $checkenv: new CheckEnv(),
   $uploadmatchdata: new UploadMatchData(),
-  debugger: false,
+  debugger: true,
   userNameObserver: null
 }
 

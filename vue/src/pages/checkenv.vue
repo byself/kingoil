@@ -82,6 +82,8 @@ export default {
           this.checkItems[2].iconType = iconType
           this.checkItems[2].error = error
         }
+
+        console.log(this.checkItems)
       
         if(this.checkItems[0].iconType === "success" && this.checkItems[1].iconType === "success" && this.checkItems[2].iconType === "success"){
           this.checkSuccess();
@@ -90,8 +92,11 @@ export default {
     },
 
     async checkSuccess() {
+      console.log("checkSuccess")
       const $background = chrome.extension.getBackgroundPage();
       const {planId} = await $background.getCommonOps();
+
+      console.log("checkSuccess planId:", planId)
       setTimeout(() => {
         if(planId){
           this.$router.push("/bet/result/home");

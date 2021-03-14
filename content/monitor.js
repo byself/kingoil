@@ -54,7 +54,7 @@ class Monitor {
     // 30分钟
     this.timeCycle = 1000 * 60 * 30;
 
-    this.debugger = false;
+    this.debugger = true;
 
     this.$ajax = new Api();
 
@@ -440,7 +440,7 @@ class Monitor {
     }else{
       this.betRequestParams = data;
 
-      data.AccountBalance = document.querySelector('.hm-MainHeaderMembersWide_Balance').innerText.slice(1)
+      data.AccountBalance = document.querySelector('.hm-MainHeaderMembersWide_Balance').innerText.slice(1).replaceAll(/,/g, "");
 
       chrome.runtime.sendMessage(
         {

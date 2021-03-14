@@ -4,6 +4,7 @@ node_modules
 /output
 /popup
 /bet
+bet.zip
 
 # local env files
 .env.local
