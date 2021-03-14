@@ -9,7 +9,7 @@ const CommonOps = {
   username: '', // 用户名
   amount: '', // 账户金额
 
-  debugger: true,
+  debugger: false,
 
   // 投注成功上报参数
   betRequestParams:{},
@@ -84,6 +84,7 @@ async function checkEnv() {
 }
 
 function autoLogin(){
+    CommonOps.debugger && console.log('background autoLogin', CommonOps)
     return CommonOps.loginStatus;
 }
 
@@ -237,6 +238,8 @@ function savePlanId(id) {
 async function beginMonitor() {
   CommonOps.debugger && console.log('monitorStatus:', CommonOps.monitorStatus)
   const activeTabId = await Bet.$utils.getCurrentTabId()
+
+  chrome.tabs.sendMessage(activeTabId, { event: 'event-begin-monitor' })
 
   // 列表页
   setInterval(function() {

@@ -77,7 +77,7 @@ export default {
 
       setTimeout(() => {
         const {iconType, error} = $background.autoLogin();
-
+        console.log("check:", iconType, error)
         if(iconType){
           this.checkItems[2].iconType = iconType
           this.checkItems[2].error = error

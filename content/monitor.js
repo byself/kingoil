@@ -9,7 +9,7 @@
  * 2. 排除下注成功的比赛
  * 3. 筛选出第4节、下半场、加时比赛
  * 4. 筛选剩余时间在[60s, 120s]之间的比赛
- * 5. 比分差在8分以上的比赛
+ * 5. 比分差在9分以上的比赛
  * 6. 如果满足上述条件的比赛有多场次，选择剩余时间最少的一场进行跳转
  *
  * 详情页监听
@@ -24,13 +24,13 @@ class Monitor {
     // 时间规则(秒)：最后2分钟-最后1分钟时间段
     this.timeRules = [60, 100];
 
-    // 分数规则：比分差不大于8分
-    this.scoreRules = 8;
+    // 分数规则：比分差不大于9分
+    this.scoreRules = 9;
 
     // mock
-    // this.gameRules = ["第3节", "第4节", "下半场", "加时"];
+    // this.gameRules = ["第1节", "第2节", "第3节", "第4节", "下半场", "加时"];
     // this.timeRules = [60, 500];
-    // this.scoreRules = 10;
+    // this.scoreRules = 20;
     
     // 满足条件的候选比赛
     this.alternativeGame = [];
@@ -54,7 +54,7 @@ class Monitor {
     // 30分钟
     this.timeCycle = 1000 * 60 * 30;
 
-    this.debugger = true;
+    this.debugger = false;
 
     this.$ajax = new Api();
 
@@ -71,6 +71,11 @@ class Monitor {
     // 点击盘口定时器
     // 如果点击盘口弹窗为弹出，间隔一定时间后再次点击；并在弹窗弹出后的回调中清除定时器
     this.timerOddsNode = null
+
+    // 是否可以下注，默认不可以下注；接口返回可以下注后改为true
+    // 在下注时通过判断球队是否在ignoreGame，判断是否已经投注成功。
+    // 如果已经投注成功，则不在下注
+    this.canSubmit = false
   }
 
   startMonitorList(){
@@ -257,7 +262,7 @@ class Monitor {
   monitorSwitchGame(){
     // 监听比赛详情信息变化
     utils.domReady(".lsb-ScoreBasedScoreboard_Team1Container", (element) => {
-      this.debugger && console.log("domReady: 切换比赛", element);
+      this.debugger && console.log("domReady: 切换比赛", element, this.canMinitorDetail);
       if(!$(".lv-ButtonBar").hasClass("Hidden")){
         document.querySelector(".lv-ButtonBar_MatchLiveIcon").click()
       }
@@ -292,13 +297,13 @@ class Monitor {
     })
 
     // 刷新金额
-    utils.domReady(".um-BalanceRefreshButton_Icon", (element) => {
-      this.debugger && console.log("domReady: 刷新金额", element);
-      this.getUserName()
-      this.refreshAmount(element)
+    // utils.domReady(".um-BalanceRefreshButton_Icon", (element) => {
+    //   this.debugger && console.log("domReady: 刷新金额", element);
+    //   this.getUserName()
+    //   this.refreshAmount(element)
 
-      element.ready = false;
-    })
+    //   element.ready = false;
+    // })
   }
 
   /**
@@ -309,10 +314,10 @@ class Monitor {
     this.debugger && console.log("========================detail begin========================:", this.isMonitorDetail);
     
     // 如果出现异常情况，导致isMonitorList、isMonitorDetail都为false时，强制重新监听detail
-    if(this.isMonitorDetail === false && this.isMonitorList === false){
-      this.stopMonitorList()
-      this.startMonitorDetail()
-    }
+    // if(this.isMonitorDetail === false && this.isMonitorList === false){
+    //   this.stopMonitorList()
+    //   this.startMonitorDetail()
+    // }
 
     if(!this.isMonitorDetail) return;
     
@@ -326,12 +331,16 @@ class Monitor {
       return;
     }
 
+    this.debugger && console.log("比赛剩余时间充足");
+
     const ATeamName = $(".lsb-ScoreBasedScoreboard_Team1Container").text();
     const BTeamName = $(".lsb-ScoreBasedScoreboard_Team2Container").text();
     const ATeamScore = $(".lsb-ScoreBasedScoreboard_TeamScore")[0] && $(".lsb-ScoreBasedScoreboard_TeamScore")[0].innerText;
     const BTeamScore = $(".lsb-ScoreBasedScoreboard_TeamScore")[1] && $(".lsb-ScoreBasedScoreboard_TeamScore")[1].innerText;
 
     const HasVideo = $(".ml18-BasketballCourt_SVG")[0] ? 1 : 0;
+
+    this.debugger && console.log("获取球队名称，比分，是否有video");
 
     // 盘口获取赔率
     let ATeamOdds = '';
@@ -346,8 +355,11 @@ class Monitor {
 
     // 如果赔率为空，表示“强弱盘赔率”盘口没有数据，结束本次监控
     if (ATeamOdds === '' && BTeamOdds === '') {
+      this.debugger && console.log("未获取到盘口赔率", this.selectedTeamNode, ATeamOddsNode, BTeamOddsNode);
       return false;
     }
+
+    this.debugger && console.log("获取盘口赔率");
 
     // 判断球权
     let BallTeam = "";
@@ -370,11 +382,17 @@ class Monitor {
       BallTeam = textArr[0];
     }
 
+    this.debugger && console.log("判断球权");
+
     // 罚球率
     const ATeamFt = $(".ml-DualStat_Percentage")[0] ? $(".ml-DualStat_Percentage")[0].innerText : "";
     const BTeamFt = $(".ml-DualStat_Percentage")[1] ? $(".ml-DualStat_Percentage")[1].innerText : "";
 
+    this.debugger && console.log("获取发球率");
+
     const BallGroupName =  this.selectedTeamNode.parents(".ovm-Competition").find(".ovm-CompetitionHeader_Name").text() 
+
+    this.debugger && console.log("获取联赛名称");
 
     const data = {
       BallGroupName: BallGroupName,
@@ -454,6 +472,8 @@ class Monitor {
 
         this.stopMonitorDetail()
 
+        this.canSubmit = true;
+
         this.log(`服务器回复下注，下注金额${bet_money}，立即投注`, true)
       } else if (bet_status === "3") {
         this.betGiveup();
@@ -506,20 +526,29 @@ class Monitor {
       mapNameToOdds[team].click();
 
       // 2s为弹出弹窗，再次点击
-      this.timerOddsNode = setInterval(() => {
-        mapNameToOdds[team].click();
-      }, 2000);
+      // todo: 可能导致多次点击盘口，多次下注
+      this.timerOddsNode = setTimeout(() => {
+        this.debugger && console.log("未检测到投注弹窗，重新监听detail");
+        clearTimeout(this.timerOddsNode);
+        this.startMonitorDetail()
+      }, 1000 * 10);
     }
   }
 
-  showKeyBoard(){
-    $(".qbs-StakeBox_StakeInput").click()
+  // 是否时首次投注
+  isFirstSubmit(){
+    const gameName = this.betRequestParams.ATeamName + this.betRequestParams.BTeamName;
+    return this.ignoreGame.indexOf(gameName) < 0;
   }
 
   // 点击投注
   confirmBetButton(){
-    this.debugger && console.log("confirmBetButton");
-    $(".qbs-PlaceBetButton, .qbs-AcceptButton").click();
+    const isFirstSubmit = this.isFirstSubmit()
+    this.debugger && console.log("canSubmit:", this.canSubmit, isFirstSubmit);
+    if(this.canSubmit && isFirstSubmit) {
+      this.debugger && console.log("confirmBetButton");
+      $(".qbs-PlaceBetButton, .qbs-AcceptButton").click();
+    }
   }
 
   // 赔率变化
@@ -542,6 +571,10 @@ class Monitor {
    */
   betSuccess(){
     this.debugger && console.log("betSuccess");
+
+    // 投注成功后
+    this.canSubmit = false;
+
     this.reportOrder()
 
     $(".qbs-QuickBetHeader_DoneButton").click();
@@ -662,7 +695,7 @@ class Monitor {
   }
 
   getUserName(){
-    console.log("getUserName inner")
+    this.debugger && console.log("getUserName inner")
 
     const username = $(".um-UserInfo_UserName").text()
     chrome.runtime.sendMessage(
@@ -711,8 +744,15 @@ class Monitor {
   async reload(){
     this.debugger && console.log("列表页停留时长：", Date.now() - this.stayBeginTime, this.timeCycle)
     if(Date.now() - this.stayBeginTime > this.timeCycle) {
-      window.location.reload()
-      window.location.hash="/IP/B18"
+
+      if(location.hash === '#/IP/B18'){
+        window.location.reload()
+      }else{
+        window.location.hash="/IP/B18"
+      }
+
+      this.startMonitorList()
+      this.stopMonitorDetail()
     };
   }
 

@@ -4,16 +4,19 @@ const Bet = {
   $monitor: new Monitor(),
   $checkenv: new CheckEnv(),
   $uploadmatchdata: new UploadMatchData(),
-  debugger: true
+  debugger: false,
+  userNameObserver: null
 }
 
 // 切换tab，停止监听
 window.addEventListener("hashchange", function(){
-  console.log("==============hashchange================")
+  log("==============hashchange================:", location.hash)
   if(location.hash === "#/IP/B18"){
+    log("篮球tab,监听list,停止detail")
     Bet.$monitor.startMonitorList()
     Bet.$monitor.stopMonitorDetail()
   }else{
+    log("非篮球tab")
     Bet.$monitor.stopMonitorList()
     Bet.$monitor.stopMonitorDetail()
   }
@@ -22,7 +25,9 @@ window.addEventListener("hashchange", function(){
 // 注意，必须设置了run_at=document_start 此段代码才会生效
 document.addEventListener('DOMContentLoaded', function() {
   log('DOMContentLoaded')
-  Bet.$monitor.monitorSwitchGame()
+
+  monitorUserName();
+
   chrome.runtime.onMessage.addListener(messageHandler)
   // Bet.$monitor.monitorSwitchGame()
   // 每隔60分钟跳转至篮球
@@ -37,6 +42,9 @@ function messageHandler(request, sender, sendResponse) {
   // log('messageHandler:', request.event)
   try{
     switch (request.event) {
+      case 'event-begin-monitor':
+        beginMonitor()
+        break
       case 'event-begin-list-monitor':
         Bet.$monitor.list()
         break
@@ -59,7 +67,10 @@ function messageHandler(request, sender, sendResponse) {
   }catch(e){
     window.location.reload()
   }
-  
+}
+
+function beginMonitor(){
+  Bet.$monitor.monitorSwitchGame()
 }
 
 /**
@@ -109,27 +120,47 @@ function getAmount(request, sender, sendResponse) {
  * @param {*} sendResponse
  */
 async function getUserName(request, sender, sendResponse){
-  console.log("getUserName outer")
+  log("getUserName outer")
+  // show menu
+  clickMenu()
+}
+
+function clickMenu(){
   let $wraperNode = document.querySelector('.hm-MainHeaderMembersWide_MembersMenuIcon');
-  // Bet.$utils.domReady(".um-UserInfo_UserName", (element) => {
-  //   console.log("getUserName inner")
-  //   chrome.runtime.sendMessage(
-  //     {
-  //       event: "event-get-username",
-  //       data: {
-  //         username: element.innerText
-  //       }
-  //     }
-  //   );
-
-  //   element.ready = false;
-
-  //   // close menu
-  //   $wraperNode.click();
-  // })
-
   // show menu
   $wraperNode.click();
+}
+
+function monitorUserName(){
+  log("monitorUserName")
+  Bet.userNameObserver = new MutationObserver(sendUserName);
+  Bet.userNameObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+
+  function sendUserName(){
+    log("sendUserName")
+
+    const node = document.querySelector(".um-UserInfo_UserName");
+
+    if(node){
+      log("username node show:", node)
+      const username = $(".um-UserInfo_UserName").text()
+      chrome.runtime.sendMessage(
+        {
+          event: "event-get-username",
+          data: {
+            username: username
+          }
+        }
+      );
+      Bet.userNameObserver.disconnect()
+
+      //hide menu 
+      clickMenu()
+    }
+  }
 }
 
 function jumpBasketball(){

@@ -19,12 +19,12 @@ class CheckEnv {
       }
     ]
     if (this.isValidUrl()) {
-      console.log("url success")
+      // console.log("url success")
       result[0].iconType = "success"
     }
 
     if (this.isLogin()) {
-      console.log("login success")
+      // console.log("login success")
       result[1].iconType = "success"
     }
 
