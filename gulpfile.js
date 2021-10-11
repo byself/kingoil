@@ -49,7 +49,7 @@ function copy(done){
 function compress(done){
     src(['bet/*', 'bet/*/**'])
     .pipe(zip('bet.zip'))
-    .pipe(dest("dist/"));
+    .pipe(dest("./"));
 
     done()
 }

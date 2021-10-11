@@ -99,7 +99,7 @@ function getUserName(request, sender, sendResponse) {
   let hasGetName = false;
 
   let timer = setInterval(() => {
-    let $nameNode = document.querySelector('.um-UserInfo_UserName');
+    let $nameNode = document.querySelector('.um-UserInfo_UserName'); 
 
     if(hasGetName){
       if($nameNode){
