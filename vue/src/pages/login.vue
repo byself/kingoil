@@ -54,7 +54,14 @@ export default {
       error: ""
     };
   },
+  mounted(){
+    this.queryUserName()
+  },
   methods: {
+    queryUserName(){
+      const $background = chrome.extension.getBackgroundPage();
+      $background.queryUserName()
+    },
     login() {
       if (!this.username) {
         this.error = "用户名不能为空";

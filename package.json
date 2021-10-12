@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "gulp build",
-    "zip": "gulp zip"
+    "build": "node build.js && gulp build",
+    "zip": "node build.js && gulp build && gulp zip"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +21,7 @@
     "gulp-zip": "^5.0.2"
   },
   "dependencies": {
-    "@babel/runtime": "^7.12.0"
+    "@babel/runtime": "^7.12.0",
+    "shelljs": "^0.8.4"
   }
 }

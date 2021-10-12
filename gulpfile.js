@@ -55,4 +55,4 @@ function compress(done){
 }
 
 exports.build = series(background, content_script, copy);
-exports.zip = series(background, content_script, copy, compress);
+exports.zip = compress;
